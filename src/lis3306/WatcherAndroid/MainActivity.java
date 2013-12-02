@@ -7,7 +7,11 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceActivity;
@@ -15,17 +19,27 @@ import android.widget.Toast;
 
 public class MainActivity extends PreferenceActivity {
 	private boolean isBound = false;
+	
+
+	Messenger serviceMessenger = null;
 	private final ServiceConnection sc = new ServiceConnection() {
 
 		@Override
 		public void onServiceConnected(ComponentName name, IBinder service) {
-			GPSService gps = ((GPSService.LocalBinder)service).getService();
 			
+			serviceMessenger = new Messenger(service);
+			try {
+				Message msg = Message.obtain(null, MessengerService.MSG_REGISTER_CLIENT);
+			} catch (RemoteException e) {}
+			
+			// GPSService gps = ((GPSService.LocalBinder)service).getService();
+
 			Toast.makeText(MainActivity.this, "Connected to GPSService", Toast.LENGTH_SHORT).show();
 		}
 
 		@Override
 		public void onServiceDisconnected(ComponentName name) {
+			serviceMessenger = null;
 			Toast.makeText(MainActivity.this, "Disconnected to GPSService", Toast.LENGTH_SHORT).show();
 		}
 		
@@ -54,7 +68,7 @@ public class MainActivity extends PreferenceActivity {
 					doUnbindService();
 				}
 				
-				isBound = isActive;
+				// isBound = isActive;
 				
 				SharedPreferences sp = getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
 				SharedPreferences.Editor editor = sp.edit();
@@ -79,12 +93,13 @@ public class MainActivity extends PreferenceActivity {
 	}
 	
 	void doBindService() {
-		bindService(new Intent(MainActivity.this, GPSService.class), sc, Context.BIND_AUTO_CREATE);
+		isBound = bindService(new Intent(MainActivity.this, GPSService.class), sc, Context.BIND_AUTO_CREATE);
 	}
 	
 	void doUnbindService() {
 		if(isBound) {
 			unbindService(sc);
+			isBound = false;
 		}
 	}
 

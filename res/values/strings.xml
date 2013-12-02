@@ -8,7 +8,8 @@
     <string name="pref_activation_desc">Activation</string>
     <string name="pref_detail_title">Details</string>
     <string name="pref_detail_period_title">Period</string>
-    <string name=""></string>
+    <string name="remote_service_started">remote.service.started</string>
+    <string name="remote_service_label">remove.service.label</string>
     
 
 </resources>

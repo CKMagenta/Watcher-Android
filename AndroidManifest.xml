@@ -14,7 +14,10 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         
-        <service android:enabled="true" android:name=".GPSService" ></service>
+        <service 
+            android:enabled="true" 
+            android:name=".GPSService" 
+            android:process=":gps" />
         
         <activity
             android:name="lis3306.WatcherAndroid.MainActivity"
