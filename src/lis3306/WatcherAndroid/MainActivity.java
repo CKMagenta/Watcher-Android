@@ -18,9 +18,24 @@ import android.preference.PreferenceActivity;
 import android.widget.Toast;
 
 public class MainActivity extends PreferenceActivity {
-	private boolean isBound = false;
 	
-
+	
+	class ActivityHandler extends Handler {
+		@Override
+		public void handleMessage(Message msg) {
+			switch(msg.what) {
+				case GPSService.MSG_SET_VALUE:
+					Toast.makeText(MainActivity.this, "Received from service : " + msg.arg1, Toast.LENGTH_SHORT).show();
+					break;
+				default :
+					super.handleMessage(msg);
+			}
+			
+		}
+	}
+	
+	
+	final Messenger activityMessenger = new Messenger(new ActivityHandler());
 	Messenger serviceMessenger = null;
 	private final ServiceConnection sc = new ServiceConnection() {
 
@@ -29,7 +44,12 @@ public class MainActivity extends PreferenceActivity {
 			
 			serviceMessenger = new Messenger(service);
 			try {
-				Message msg = Message.obtain(null, MessengerService.MSG_REGISTER_CLIENT);
+				Message msg = Message.obtain(null, GPSService.MSG_REGISTER_CLIENT);
+				msg.replyTo = activityMessenger;
+				serviceMessenger.send(msg);
+				
+				msg = Message.obtain(null, GPSService.MSG_SET_VALUE, this.hashCode(), 0);
+				serviceMessenger.send(msg);
 			} catch (RemoteException e) {}
 			
 			// GPSService gps = ((GPSService.LocalBinder)service).getService();
@@ -44,6 +64,8 @@ public class MainActivity extends PreferenceActivity {
 		}
 		
 	};
+	
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -91,6 +113,8 @@ public class MainActivity extends PreferenceActivity {
 			}
 		});
 	}
+
+	private boolean isBound = false;
 	
 	void doBindService() {
 		isBound = bindService(new Intent(MainActivity.this, GPSService.class), sc, Context.BIND_AUTO_CREATE);
