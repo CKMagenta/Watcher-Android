@@ -4,5 +4,11 @@
     <string name="app_name">Watcher</string>
     <string name="action_settings">Settings</string>
     <string name="hello_world">Hello world!</string>
+    <string name="pref_activation_title">Activation</string>
+    <string name="pref_activation_desc">Activation</string>
+    <string name="pref_detail_title">Details</string>
+    <string name="pref_detail_period_title">Period</string>
+    <string name=""></string>
+    
 
 </resources>

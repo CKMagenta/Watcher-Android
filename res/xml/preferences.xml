@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+    <PreferenceCategory 
+        android:title="@string/pref_activation_title">
+        <CheckBoxPreference 
+            android:title="@string/pref_activation_title"
+            android:key="activity" />
+    </PreferenceCategory>
+    
+    <PreferenceCategory 
+        android:title="@string/pref_detail_title"
+        android:dependency="activity">
+        <ListPreference 
+            android:title="@string/pref_detail_period_title" 
+            android:key="period" android:entryValues="@array/period-list"/>
+    </PreferenceCategory>
+    
+
+</PreferenceScreen>
