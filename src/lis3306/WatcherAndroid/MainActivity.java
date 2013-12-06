@@ -70,7 +70,7 @@ public class MainActivity extends PreferenceActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
+		// setContentView(R.layout.activity_main);
 		addPreferencesFromResource(R.xml.preferences);
 		
 		SharedPreferences sp = getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
