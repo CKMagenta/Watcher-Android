@@ -8,8 +8,8 @@
     <string name="pref_activation_desc">Activation</string>
     <string name="pref_detail_title">Details</string>
     <string name="pref_detail_period_title">Period</string>
-    <string name="remote_service_started">remote.service.started</string>
-    <string name="remote_service_label">remove.service.label</string>
+    <string name="remote_service_started">Watcher GPS가 시작되었습니다.</string>
+    <string name="remote_service_label">Watcher GPS Service가 동작중입니다.</string>
     
 
 </resources>

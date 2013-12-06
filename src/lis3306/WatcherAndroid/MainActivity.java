@@ -1,6 +1,8 @@
 package lis3306.WatcherAndroid;
 
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningServiceInfo;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -15,6 +17,7 @@ import android.os.RemoteException;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceActivity;
+import android.util.Log;
 import android.widget.Toast;
 
 public class MainActivity extends PreferenceActivity {
@@ -66,7 +69,9 @@ public class MainActivity extends PreferenceActivity {
 	};
 	
 	
-	
+	/**
+	 * Activity Life Cycle
+	 */
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -74,7 +79,8 @@ public class MainActivity extends PreferenceActivity {
 		addPreferencesFromResource(R.xml.preferences);
 		
 		SharedPreferences sp = getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
-		isBound = sp.getBoolean("activity", false);
+		SharedPreferences.Editor editor = sp.edit();
+		editor.putBoolean("activity", isServiceRunning());
 		
 		Preference activityPref = findPreference("activity");
 		activityPref.setOnPreferenceChangeListener(new OnPreferenceChangeListener() {
@@ -82,19 +88,10 @@ public class MainActivity extends PreferenceActivity {
 			@Override
 			public boolean onPreferenceChange(Preference preference, Object newValue) {
 				
-				boolean isActive = (Boolean)newValue;
-				
-				if(isActive) {
-					doBindService();
-				} else {
-					doUnbindService();
-				}
-				
-				// isBound = isActive;
-				
+				boolean willActive = willBindService((Boolean)newValue);
 				SharedPreferences sp = getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
 				SharedPreferences.Editor editor = sp.edit();
-				editor.putBoolean("activity", isActive);
+				editor.putBoolean("activity", willActive);
 				editor.commit();
 				return true;
 			}
@@ -113,18 +110,27 @@ public class MainActivity extends PreferenceActivity {
 			}
 		});
 	}
-
-	private boolean isBound = false;
 	
-	void doBindService() {
-		isBound = bindService(new Intent(MainActivity.this, GPSService.class), sc, Context.BIND_AUTO_CREATE);
-	}
-	
-	void doUnbindService() {
-		if(isBound) {
-			unbindService(sc);
-			isBound = false;
+	boolean willBindService(boolean willBind) {
+		if(willBind) {
+			if( isServiceRunning() == false ) {
+				return bindService(new Intent(MainActivity.this, GPSService.class), sc, Context.BIND_AUTO_CREATE);
+			}
+		} else {
+			if( isServiceRunning() == true )
+				unbindService(sc);
 		}
+		
+		return false;
 	}
-
+	
+	boolean isServiceRunning() {
+		ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+	    for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+	        if (GPSService.class.getName().equals(service.service.getClassName())) {
+	            return true;
+	        }
+	    }
+	    return false;
+	}
 }
