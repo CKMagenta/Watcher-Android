@@ -4,13 +4,16 @@
 package lis3306.WatcherAndroid;
 
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Iterator;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
+import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 
@@ -46,32 +49,75 @@ public class GPSService extends Service {
 	static final float MIN_CRITERIA_DISTANCE = 0;//500;			// in meters
 	static final long MIN_CRITERIA_TIME = 0;//300 * 1000;				// in ms
 	
+	private static final String url = "http://playbook.cafe24.com/test_mysql.php";
+	
 	/**
 	 * HTTP Connection
 	 */
-	public InputStream getInputStreamFromUrl(String url) {
+	public InputStream sendFormDataOnConnection(ArrayList<BasicNameValuePair> formData) {
 		InputStream content = null;
-		try {
-			HttpClient httpclient = new DefaultHttpClient();
-			HttpPost httpPost = new HttpPost(url);
-			List nameValuePairs = new ArrayList(1);
-			//this is where you add your data to the post method
-			nameValuePairs.add(new BasicNameValuePair("name", "anthony"));
-			httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
-			// Execute HTTP Post Request
-			HttpResponse response = httpclient.execute(httpPost);
-			content = response.getEntity().getContent();
-			
-			return content;
-		} catch (Exception e) {
-			return null; 
+		StringBuilder sb = new StringBuilder();
+        //adding some data to send along with the request to the server
+		Iterator<BasicNameValuePair> it = formData.iterator();
+		sb.append("dummy=dummy");
+		
+		while (it.hasNext()) {
+			BasicNameValuePair pair = it.next();
+			sb.append("&" + pair.getName() + "=" + pair.getValue());	
 		}
+		
+		URL url;
+		try {
+			url = new URL(GPSService.url);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setDoOutput(true);
+			conn.setRequestMethod("POST");
+			OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
+			// this is were we're adding post data to the request
+			wr.write(sb.toString());
+			wr.flush();
+			content = conn.getInputStream();
+			wr.close();
+		} catch (Exception e) {
+			//handle the exception !
+			Log.d("SERVICE",e.getMessage());
+		}
+        return content;
+	}
+	public String sendFormData(ArrayList<BasicNameValuePair> formData) {
+		String content = "";
+		try {
+//			ArrayList<BasicNameValuePair> formData = new ArrayList<BasicNameValuePair>();
+//			formData.add(new BasicNameValuePair("name", "anthony"));
+			
+			HttpPost request = new HttpPost(GPSService.url);
+			request.setEntity(new UrlEncodedFormEntity(formData, "utf-8"));
+			
+			
+			DefaultHttpClient httpClient = new DefaultHttpClient();
+			ResponseHandler handler = new BasicResponseHandler();
+			String response = httpClient.execute(request, handler);
+			content = response;
+		} catch (Exception e) {
+			 
+		}
+		
+		return content;
 	}
 	
 	LocationListener locationListener = new LocationListener() {
 		public void onLocationChanged(Location location) {
+			ArrayList<BasicNameValuePair> formData = new ArrayList<BasicNameValuePair>();
 			double lat = location.getLatitude();
 			double lon = location.getLongitude();
+			formData.add(new BasicNameValuePair("lat", ""+lat) );
+			formData.add(new BasicNameValuePair("lon", ""+lon) );
+			formData.add(new BasicNameValuePair("TS", ""+System.currentTimeMillis() / 1000L));
+			formData.add(new BasicNameValuePair("action", "putGPS"));
+			
+			// sendFormData(formData);
+			sendFormDataOnConnection(formData);
+			
 			message("GPS("+lat+","+lon+")");
 		}
 
@@ -167,6 +213,7 @@ public class GPSService extends Service {
 	@Override
 	public void onCreate() {
 		super.onCreate();
+		android.os.Debug.waitForDebugger(); 
 		message("GPSService is onCreate");
 		willRegisterService(true);
 	}
