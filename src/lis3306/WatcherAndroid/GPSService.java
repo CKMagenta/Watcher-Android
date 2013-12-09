@@ -17,12 +17,15 @@ import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 
+import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -49,12 +52,12 @@ public class GPSService extends Service {
 	static final float MIN_CRITERIA_DISTANCE = 0;//500;			// in meters
 	static final long MIN_CRITERIA_TIME = 0;//300 * 1000;				// in ms
 	
-	private static final String url = "http://playbook.cafe24.com/test_mysql.php";
+	public static final String url = "http://119.197.38.238:8080/Watcher/HandlerServlet";
 	
 	/**
 	 * HTTP Connection
 	 */
-	public InputStream sendFormDataOnConnection(ArrayList<BasicNameValuePair> formData) {
+	public static InputStream sendFormDataOnConnection(ArrayList<BasicNameValuePair> formData) {
 		InputStream content = null;
 		StringBuilder sb = new StringBuilder();
         //adding some data to send along with the request to the server
@@ -80,15 +83,16 @@ public class GPSService extends Service {
 			wr.close();
 		} catch (Exception e) {
 			//handle the exception !
-			Log.d("SERVICE",e.getMessage());
+			Log.d("SERVICE", "error on `sendFormDataOnConnection` :" + e.getMessage() + "");
 		}
         return content;
 	}
-	public String sendFormData(ArrayList<BasicNameValuePair> formData) {
+	static public String sendFormData(ArrayList<BasicNameValuePair> formData) {
 		String content = "";
 		try {
 //			ArrayList<BasicNameValuePair> formData = new ArrayList<BasicNameValuePair>();
 //			formData.add(new BasicNameValuePair("name", "anthony"));
+			formData.add(new BasicNameValuePair("TS", ""+System.currentTimeMillis() / 1000L));
 			
 			HttpPost request = new HttpPost(GPSService.url);
 			request.setEntity(new UrlEncodedFormEntity(formData, "utf-8"));
@@ -99,32 +103,58 @@ public class GPSService extends Service {
 			String response = httpClient.execute(request, handler);
 			content = response;
 		} catch (Exception e) {
-			 
+			Log.d("SERVICE","error on `sendFormData` : " + e.getMessage() + "");
 		}
 		
 		return content;
 	}
 	
+	
+	
 	LocationListener locationListener = new LocationListener() {
 		public void onLocationChanged(Location location) {
 			ArrayList<BasicNameValuePair> formData = new ArrayList<BasicNameValuePair>();
-			double lat = location.getLatitude();
-			double lon = location.getLongitude();
+			final double lat = location.getLatitude();
+			final double lon = location.getLongitude();
 			formData.add(new BasicNameValuePair("lat", ""+lat) );
 			formData.add(new BasicNameValuePair("lon", ""+lon) );
-			formData.add(new BasicNameValuePair("TS", ""+System.currentTimeMillis() / 1000L));
 			formData.add(new BasicNameValuePair("action", "putGPS"));
+			SharedPreferences sp = getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
+			String phonenumber = sp.getString("phonenumber", "0");
+			formData.add(new BasicNameValuePair("phonenumber", phonenumber));
+			//SharedPreferences sp = getSharedPreferences("wa", mode)
 			
-			// sendFormData(formData);
-			sendFormDataOnConnection(formData);
+			final ArrayList<BasicNameValuePair> fd = formData;
 			
-			message("GPS("+lat+","+lon+")");
+			final Handler networkHandler = new Handler() {
+				@Override
+				public void handleMessage(Message msg) {
+					message("GPS("+lat+","+lon+") : " + (String)msg.obj);
+				}
+			};
+			
+			Thread networkThread = new Thread() {
+				public void run() {
+					String result = GPSService.sendFormData(fd);
+					//sendFormDataOnConnection(formData);
+					Message msg = networkHandler.obtainMessage(0, result);
+					networkHandler.sendMessage(msg);
+				};
+			};
+			networkThread.start();
+			
+			
 		}
 
-		public void onStatusChanged(String provider, int status, Bundle extras) {}
-		public void onProviderEnabled(String provider) {}
-
-		public void onProviderDisabled(String provider) {}
+		public void onStatusChanged(String provider, int status, Bundle extras) {
+			message("GPS Provider : " + provider + "onStatusChanged : " + status);
+		}
+		public void onProviderEnabled(String provider) {
+			message("GPS Provider : " + provider + "onEnabled");
+		}
+		public void onProviderDisabled(String provider) {
+			message("GPS Provider : " + provider + "onDisabled");
+		}
 	};
 	
 	
@@ -155,7 +185,7 @@ public class GPSService extends Service {
 	
 	void message(String message) {
 		Log.e("SERVICE", message);
-		Toast.makeText(GPSService.this, message, Toast.LENGTH_SHORT).show();
+		// Toast.makeText(GPSService.this, message, Toast.LENGTH_SHORT).show();
 	}
 	
 	
@@ -213,7 +243,10 @@ public class GPSService extends Service {
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		android.os.Debug.waitForDebugger(); 
+		boolean isDebuggable =  ( 0 != ( getApplicationInfo().flags &= ApplicationInfo.FLAG_DEBUGGABLE ) );
+
+		//if(isDebuggable) 
+			android.os.Debug.waitForDebugger(); 
 		message("GPSService is onCreate");
 		willRegisterService(true);
 	}

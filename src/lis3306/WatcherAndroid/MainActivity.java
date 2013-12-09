@@ -17,7 +17,7 @@ import android.os.RemoteException;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.PreferenceActivity;
-import android.util.Log;
+import android.preference.PreferenceManager;
 import android.widget.Toast;
 
 public class MainActivity extends PreferenceActivity {
@@ -28,7 +28,7 @@ public class MainActivity extends PreferenceActivity {
 		public void handleMessage(Message msg) {
 			switch(msg.what) {
 				case GPSService.MSG_SET_VALUE:
-					Toast.makeText(MainActivity.this, "Received from service : " + msg.arg1, Toast.LENGTH_SHORT).show();
+					// Toast.makeText(MainActivity.this, "Received from service : " + msg.arg1, Toast.LENGTH_SHORT).show();
 					break;
 				default :
 					super.handleMessage(msg);
@@ -75,13 +75,19 @@ public class MainActivity extends PreferenceActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		// setContentView(R.layout.activity_main);
+
+		SharedPreferences sp = getPrefence();
+		String phonenumber = sp.getString("phonenumber", DEFAULT_PHONENUMBER);
+		if(phonenumber.equalsIgnoreCase(DEFAULT_PHONENUMBER)) {
+			goRegister();
+		}
+		
+		
+		
+		
+		
 		addPreferencesFromResource(R.xml.preferences);
-		
-		SharedPreferences sp = getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
-		SharedPreferences.Editor editor = sp.edit();
-		editor.putBoolean("activity", isServiceRunning());
-		
+		refreshPreferenceView();
 		Preference activityPref = findPreference("activity");
 		activityPref.setOnPreferenceChangeListener(new OnPreferenceChangeListener() {
 			
@@ -89,7 +95,7 @@ public class MainActivity extends PreferenceActivity {
 			public boolean onPreferenceChange(Preference preference, Object newValue) {
 				
 				boolean willActive = willBindService((Boolean)newValue);
-				SharedPreferences sp = getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
+				SharedPreferences sp = getPrefence();
 				SharedPreferences.Editor editor = sp.edit();
 				editor.putBoolean("activity", willActive);
 				editor.commit();
@@ -102,19 +108,26 @@ public class MainActivity extends PreferenceActivity {
 			
 			@Override
 			public boolean onPreferenceChange(Preference preference, Object newValue) {
-				SharedPreferences sp = getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
+				SharedPreferences sp = getPrefence();
 				SharedPreferences.Editor editor = sp.edit();
 				editor.putInt("period", (Integer)newValue);
 				editor.commit();
 				return true;
 			}
 		});
+		
+		
 	}
 	
 	boolean willBindService(boolean willBind) {
 		if(willBind) {
 			if( isServiceRunning() == false ) {
-				return bindService(new Intent(MainActivity.this, GPSService.class), sc, Context.BIND_AUTO_CREATE);
+				Intent intent = new Intent(MainActivity.this, GPSService.class);
+				Bundle b = new Bundle();
+				SharedPreferences sp = getPrefence();
+				b.putString("phonenumber", sp.getString("phoneNumber", DEFAULT_PHONENUMBER));
+				intent.putExtras(b);
+				return bindService(intent, sc, Context.BIND_AUTO_CREATE);
 			}
 		} else {
 			if( isServiceRunning() == true )
@@ -132,5 +145,66 @@ public class MainActivity extends PreferenceActivity {
 	        }
 	    }
 	    return false;
+	}
+	
+	SharedPreferences getPrefence() {
+		// SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(MainActivity.this); // 
+		//return getPreferenceScreen().getSharedPreferences();
+		return getSharedPreferences("watcherPref", Activity.MODE_PRIVATE);
+	}
+	
+	void refreshPreferenceView() {
+		
+		SharedPreferences sp = getPrefence();
+		
+		Preference activityPref = findPreference("activity");
+		activityPref.setDefaultValue(isServiceRunning());
+		
+		Preference pnPref = findPreference("phonenumber");
+		String phonenumber = sp.getString("phonenumber", DEFAULT_PHONENUMBER);
+		pnPref.setDefaultValue(phonenumber);
+
+		
+	}
+	
+	
+	public static final int REGISTER_REQUEST_CODE = 777;
+	public static final String DEFAULT_PHONENUMBER = "0";
+	
+	private void goRegister() {
+		Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
+		this.startActivityForResult(intent, REGISTER_REQUEST_CODE);
+	}
+	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		
+		if(requestCode == REGISTER_REQUEST_CODE) { 
+			if(resultCode == RESULT_OK) {
+				Bundle b = data.getExtras();
+				String phonenumber = b.getString("phonenumber");
+				if(phonenumber == null || phonenumber.length() == 0 || phonenumber.equalsIgnoreCase("") || phonenumber.equalsIgnoreCase(DEFAULT_PHONENUMBER)) {
+					goRegister();
+				} else {
+					SharedPreferences sp = getPrefence();
+					SharedPreferences.Editor editor = sp.edit();
+					editor.putString("phonenumber", phonenumber);
+					editor.commit();
+					refreshPreferenceView();
+				}
+				
+			} else {
+				Bundle b = data.getExtras();
+				String message = b.getString("message");
+				if(message != null && message.length() > 0) {
+					Toast.makeText(MainActivity.this, "Error : "+message, Toast.LENGTH_SHORT).show();
+				} else {
+					Toast.makeText(MainActivity.this, "등록절차를 반드시 거쳐야 합니다.\n다시 실행해 주세요.", Toast.LENGTH_SHORT).show();
+				}
+				finish();
+			}
+		} else {
+			super.onActivityResult(requestCode, resultCode, data);
+		}
 	}
 }

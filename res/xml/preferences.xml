@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
-    <PreferenceCategory 
+    <PreferenceCategory
+        android:title="@string/pref_basic_title" >
+		<EditTextPreference
+		    android:title="@string/pref_basic_phonenumber_title"
+		    android:key="phonenumber"
+		    android:enabled="false" />
+	</PreferenceCategory>
+	<PreferenceCategory 
         android:title="@string/pref_activation_title">
         <CheckBoxPreference 
             android:title="@string/pref_activation_title"
@@ -14,6 +21,8 @@
             android:title="@string/pref_detail_period_title" 
             android:key="period" android:entryValues="@array/period_list"/>
     </PreferenceCategory>
+    
+    
     
 
 </PreferenceScreen>
