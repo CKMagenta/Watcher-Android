@@ -49,8 +49,8 @@ public class GPSService extends Service {
 	static final int MSG_UNREGISTER_CLIENT = 2;
 	static final int MSG_SET_VALUE = 3;
 	
-	static final float MIN_CRITERIA_DISTANCE = 0;//500;			// in meters
-	static final long MIN_CRITERIA_TIME = 0;//300 * 1000;				// in ms
+	static final float MIN_CRITERIA_DISTANCE = 100;//500;			// in meters
+	static final long MIN_CRITERIA_TIME = 60;//300 * 1000;				// in ms
 	
 	public static final String url = "http://119.197.38.238:8080/Watcher/HandlerServlet";
 	
